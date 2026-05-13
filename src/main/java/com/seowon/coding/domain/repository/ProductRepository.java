@@ -19,6 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     
     List<Product> findByStockQuantityGreaterThan(int minStock);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :productId")
     Optional<Product> findByIdWithLock(Long productId);
 }

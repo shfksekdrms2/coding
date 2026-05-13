@@ -219,6 +219,8 @@ public class OrderService {
      * 3. 사유: 선택한 전략의 장단점 및 채택 사유를 주석으로 기술
      * 4. 검증: OrderConcurrencyTest의 테스트 케이스를 항상 통과해야 함 (Race Condition 방지 증명)
      */
+    // Pessimistic 락 구현, 동시에 주문이 폭주하기때문에 정합성을 위해 하나씩 주문이 들어가도록 함.
+    // 단점: 주문이 많으면 계속 기다리고있음.
     public Order placeOrderWithLock(String customerName, String customerEmail, List<Long> productIds, List<Integer> quantities) {
         Order order = Order.builder()
                 .customerName(customerName)
