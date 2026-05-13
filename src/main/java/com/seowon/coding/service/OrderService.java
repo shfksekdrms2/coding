@@ -27,6 +27,7 @@ public class OrderService {
     
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final ProductService productService;
     private final ProcessingStatusRepository processingStatusRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -81,8 +82,7 @@ public class OrderService {
             Long pid = productIds.get(i);
             int qty = quantities.get(i);
 
-            Product product = productRepository.findById(pid)
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + pid));
+            Product product = productService.findByProductIdOrThrow(pid);
             if (qty <= 0) {
                 throw new IllegalArgumentException("quantity must be positive: " + qty);
             }
@@ -137,8 +137,7 @@ public class OrderService {
             Long pid = req.getProductId();
             int qty = req.getQuantity();
 
-            Product product = productRepository.findById(pid)
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + pid));
+            Product product = productService.findByProductIdOrThrow(pid);
             if (qty <= 0) {
                 throw new IllegalArgumentException("quantity must be positive: " + qty);
             }
@@ -158,10 +157,7 @@ public class OrderService {
             subtotal = subtotal.add(product.getPrice().multiply(BigDecimal.valueOf(qty)));
         }
 
-        BigDecimal shipping = subtotal.compareTo(new BigDecimal("100.00")) >= 0 ? BigDecimal.ZERO : new BigDecimal("5.00");
-        BigDecimal discount = (couponCode != null && couponCode.startsWith("SALE")) ? new BigDecimal("10.00") : BigDecimal.ZERO;
-
-        order.setTotalAmount(subtotal.add(shipping).subtract(discount));
+        order.setSubtotalWithShippingAndDiscount(subtotal, couponCode);
         order.setStatus(Order.OrderStatus.PROCESSING);
         return orderRepository.save(order);
     }

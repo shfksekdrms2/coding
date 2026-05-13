@@ -76,4 +76,10 @@ public class Order {
     public enum OrderStatus {
         PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
     }
+
+    public void setSubtotalWithShippingAndDiscount(BigDecimal subtotal, String couponCode){
+        BigDecimal shipping = subtotal.compareTo(new BigDecimal("100.00")) >= 0 ? BigDecimal.ZERO : new BigDecimal("5.00");
+        BigDecimal discount = (couponCode != null && couponCode.startsWith("SALE")) ? new BigDecimal("10.00") : BigDecimal.ZERO;
+        setTotalAmount(subtotal.add(shipping).subtract(discount));
+    }
 }
