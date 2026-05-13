@@ -169,10 +169,13 @@ public class OrderService {
      * - 리뷰 포인트: proxy 및 transaction 분리, 대량 주문 처리시 이슈, 예외 전파/롤백 범위, 가독성 등
      * - 적당한 수준에서 요구사항(기획)을 가정하여 리뷰를 상세히 작성하세요.
      */
+    // todo: 대량 주문 처리의 경우 하나의 트랜잭션으로 묶으면 DB 를 오랫동안 점유하고 있어 성능 저하 및 실패시 관리가 필요함.
+    // todo: 시작, 중간 진행률 저장, 종료 를 하는 메소드를 각각 분리하면 가독성이 향상될 것으로 보여짐.
     @Transactional
     public void bulkShipOrdersParent(String jobId, List<Long> orderIds) {
         ProcessingStatus ps = processingStatusRepository.findByJobId(jobId)
                 .orElseGet(() -> processingStatusRepository.save(ProcessingStatus.builder().jobId(jobId).build()));
+        // todo: save 시 transactional 어노테이션이 끝나는 지점에서 저장됨으로 유저가 running 상태를 볼수가 없어 시작하는 지점의 영속성을 끊어야함.
         ps.markRunning(orderIds == null ? 0 : orderIds.size());
         processingStatusRepository.save(ps);
 
@@ -184,8 +187,11 @@ public class OrderService {
                 // 중간 진행률 저장
                 this.updateProgressRequiresNew(jobId, ++processed, orderIds.size());
             } catch (Exception e) {
+                // todo: 에러 로깅 추가 필요
+                // todo: 에러 발생시 어떻게 처리할지 논의 필요 (재시도 or 조회 실패 등)
             }
         }
+        // todo: 첫 리뷰와 동일하게 영속상태가 연결되어 있어 항상 완료 상태만 유저에게 보임.
         ps = processingStatusRepository.findByJobId(jobId).orElse(ps);
         ps.markCompleted();
         processingStatusRepository.save(ps);
