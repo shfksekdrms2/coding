@@ -68,7 +68,42 @@ public class OrderService {
      * placeOrder 메소드의 시그니처는 변경하지 않은 채 구현하세요.
      */
     public Order placeOrder(String customerName, String customerEmail, List<Long> productIds, List<Integer> quantities) {
-        return null;
+        Order order = Order.builder()
+                .customerName(customerName)
+                .customerEmail(customerEmail)
+                .orderDate(LocalDateTime.now())
+                .status(Order.OrderStatus.PENDING)
+                .build();
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (int i = 0; i < productIds.size(); i++) {
+            // 순서가 보장되는지 확인필요
+            Long pid = productIds.get(i);
+            int qty = quantities.get(i);
+
+            Product product = productRepository.findById(pid)
+                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + pid));
+            if (qty <= 0) {
+                throw new IllegalArgumentException("quantity must be positive: " + qty);
+            }
+            if (product.getStockQuantity() < qty) {
+                throw new IllegalStateException("insufficient stock for product " + pid);
+            }
+
+            OrderItem item = OrderItem.builder()
+                    .order(order)
+                    .product(product)
+                    .quantity(qty)
+                    .price(product.getPrice())
+                    .build();
+            order.getItems().add(item);
+
+            product.decreaseStock(qty);
+            subtotal = subtotal.add(product.getPrice().multiply(BigDecimal.valueOf(qty)));
+        }
+
+        order.setTotalAmount(subtotal);
+        return orderRepository.save(order);
     }
 
     /**
