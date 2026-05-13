@@ -2,12 +2,14 @@ package com.seowon.coding.service;
 
 import com.seowon.coding.domain.model.Product;
 import com.seowon.coding.domain.repository.ProductRepository;
+import com.seowon.coding.util.PolicyInner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,23 +72,19 @@ public class ProductService {
      * 2. 확장성: 세율(Tax)이나 반올림 정책을 외부 정책 객체(Policy/Strategy)로 분리하여 DI로 주입받도록 설계하세요.
      * 3. 성능: 다건 처리 시 영속성 컨텍스트의 쓰기 지연(Write-behind)을 활용하여 DB I/O를 최소화하세요.
      */
-    public void applyBulkPriceChange(List<Long> productIds, double percentage, boolean includeTax) {
+    public void applyBulkPriceChange(List<Long> productIds, double percentage) {
         if (productIds == null || productIds.isEmpty()) {
             throw new IllegalArgumentException("empty productIds");
         }
+        List<Product> products = new ArrayList<>();
         for (Long id : productIds) {
             Product p = productRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Product not found: " + id));
 
-            double base = p.getPrice() == null ? 0.0 : p.getPrice().doubleValue();
-            double changed = base + (base * (percentage / 100.0));
-            if (includeTax) {
-                changed = changed * 1.1;
-            }
-            BigDecimal newPrice = BigDecimal.valueOf(changed).setScale(2, RoundingMode.HALF_UP);
-            p.setPrice(newPrice);
-            productRepository.save(p);
+            p.setNewPrice(PolicyInner.policy(percentage), PolicyInner.includeTax, PolicyInner.policyRoundingMode);
+            products.add(p);
         }
+        productRepository.saveAll(products);
     }
 
     public Product findByProductIdOrThrow(Long pid) {

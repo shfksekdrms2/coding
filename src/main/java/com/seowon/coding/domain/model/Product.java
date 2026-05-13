@@ -12,6 +12,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Entity
 @Data
@@ -53,5 +54,14 @@ public class Product {
             throw new IllegalArgumentException("Quantity must be positive");
         }
         stockQuantity += quantity;
+    }
+
+    public void setNewPrice(BigDecimal percentage, boolean includeTax, RoundingMode policyRoundingMode) {
+        BigDecimal base = this.price == null ? BigDecimal.ZERO : this.price;
+        BigDecimal changed = percentage.divide(BigDecimal.valueOf(100).multiply(base)).add(base);
+        if (includeTax) {
+            changed = changed.multiply(BigDecimal.valueOf(1.1));
+        }
+        this.price = changed.setScale(2, policyRoundingMode);
     }
 }
