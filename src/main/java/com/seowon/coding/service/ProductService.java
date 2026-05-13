@@ -54,6 +54,11 @@ public class ProductService {
      *                     XML 또는 @Select 어노테이션으로 구현
      */
     @Transactional(readOnly = true)
+    public List<Product> findByCategory(String category) {
+        return productRepository.findByCategory(category);
+    }
+
+    @Transactional(readOnly = true)
     public List<Product> findProductsByCategory(String category) {
         return List.of();
     }
